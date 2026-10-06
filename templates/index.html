@@ -4,11 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Онлайн-библиотека — МБОУ «Школа №73 г.о. Самара»</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=PT+Serif:wght@400;700&family=JetBrains+Mono:wght@400;600&family=Comic+Neue:wght@400;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
-<!-- ============ LOADER (3D CUBE) ============ -->
+<!-- GLOW BACKGROUND -->
+<div class="glow-bg">
+  <div class="glow-blob g1"></div>
+  <div class="glow-blob g2"></div>
+  <div class="glow-blob g3"></div>
+</div>
+
+<!-- LOADER -->
 <div class="loader" id="loader">
   <div class="cube-scene">
     <div class="cube">
@@ -25,47 +35,35 @@
   <div class="loader-sub">МБОУ «Школа №73 г.о. Самара»</div>
 </div>
 
-<!-- ============ ФОНЫ ============ -->
-<div class="bg-layer" id="bgA"></div>
-<div class="bg-layer" id="bgB"></div>
-<div class="bg-overlay"></div>
-
-<!-- ============ AUTH OVERLAY ============ -->
+<!-- AUTH -->
 <div class="auth-overlay hidden" id="authOverlay">
   <div class="auth-card">
-    <button class="auth-close" id="authClose" title="Закрыть">×</button>
-
+    <button class="auth-close" id="authClose">×</button>
     <div class="auth-logo">▤</div>
     <h1 class="auth-title">Онлайн-библиотека</h1>
     <p class="auth-sub">МБОУ «Школа №73 г.о. Самара»</p>
-
     <div class="auth-tabs">
       <button class="auth-tab active" data-auth="login">Вход</button>
       <button class="auth-tab" data-auth="register">Регистрация</button>
     </div>
-
     <form id="authForm" autocomplete="off">
-      <label class="field">
-        <span>Логин</span>
-        <input type="text" id="authLogin" placeholder="ivanov" maxlength="32" required>
-      </label>
-      <label class="field">
-        <span>Пароль</span>
-        <input type="password" id="authPassword" placeholder="Минимум 6 символов" minlength="6" required>
-      </label>
+      <label class="field"><span>Логин</span>
+        <input type="text" id="authLogin" placeholder="suzarux" maxlength="32" required></label>
+      <label class="field"><span>Пароль</span>
+        <input type="password" id="authPassword" placeholder="Минимум 6 символов" minlength="6" required></label>
       <div class="auth-error" id="authError"></div>
       <button type="submit" class="btn btn-primary btn-full" id="authSubmit">Войти</button>
     </form>
-
-    <button class="auth-skip" id="authSkip">Читать без входа →</button>
+    <button class="btn btn-ghost btn-full" style="margin-top:12px;font-size:12.5px" id="authSkip">Читать без входа →</button>
+    <div class="auth-hint">Демо: <code>suzarux / admin123</code> · <code>ivanov / user123</code></div>
   </div>
 </div>
 
-<!-- ============ APPLICATION ============ -->
+<!-- APP -->
 <div class="app hidden" id="app">
 
-  <aside class="sidebar" id="sidebar">
-    <div class="brand reveal" style="--i:0">
+  <aside class="sidebar">
+    <div class="brand reveal" style="--i:0" id="brandLogo">
       <div class="brand-logo">▤</div>
       <div class="brand-text">
         <span class="brand-title">Библиотека</span>
@@ -73,84 +71,81 @@
       </div>
     </div>
 
-    <nav class="nav">
-      <button class="nav-item active reveal" style="--i:1" data-tab="home">
-        <span class="ni-icon">⌂</span><span class="ni-label">Главная</span>
-      </button>
-      <button class="nav-item reveal" style="--i:2" data-tab="books">
-        <span class="ni-icon">▤</span><span class="ni-label">Произведения</span>
-      </button>
-      <button class="nav-item reveal" style="--i:3" data-tab="add">
-        <span class="ni-icon">✎</span><span class="ni-label">Добавить</span>
-      </button>
+    <nav class="nav" id="mainNav">
+      <button class="nav-item active reveal" style="--i:1" data-tab="home"><span class="ni-icon">⌂</span>Главная</button>
+      <button class="nav-item reveal" style="--i:2" data-tab="books"><span class="ni-icon">▤</span>Произведения</button>
+      <button class="nav-item reveal" style="--i:3" data-tab="history"><span class="ni-icon">§</span>История школы</button>
+      <button class="nav-item reveal" style="--i:4" data-tab="users"><span class="ni-icon">◉</span>Пользователи</button>
+      <button class="nav-item reveal" style="--i:5" data-tab="tickets"><span class="ni-icon">✎</span>Заявки<span class="nav-badge" id="ticketsBadge">0</span></button>
+      <button class="nav-item reveal hidden" style="--i:6" id="navChat" data-tab="chat"><span class="ni-icon">✦</span>Чат админов<span class="nav-badge" id="chatBadge">0</span></button>
+      <button class="nav-item reveal" style="--i:7" data-tab="add"><span class="ni-icon">＋</span>Добавить книгу</button>
+      <button class="nav-item reveal" style="--i:8" data-tab="settings"><span class="ni-icon">⚙</span>Настройки</button>
     </nav>
 
-    <div class="sidebar-footer reveal" style="--i:4">
-      <button class="theme-toggle" id="themeToggle" title="Сменить тему">
-        <span class="tt-track"><span class="tt-thumb">◐</span></span>
-      </button>
+    <div class="sidebar-footer reveal" style="--i:9">
       <div class="user-slot" id="userSlot"></div>
     </div>
   </aside>
 
   <main class="main">
-    <header class="topbar reveal" style="--i:5">
+    <header class="topbar reveal" style="--i:10">
       <div class="crumbs">
         <span class="crumb-root">Библиотека</span>
         <span class="crumb-sep">/</span>
         <span class="crumb-cur" id="crumbCurrent">Главная</span>
       </div>
+      <button class="btn btn-primary btn-small topbar-login hidden" id="topbarLogin">Войти</button>
       <div class="search-wrap" id="searchWrap">
         <span class="search-icon">⌕</span>
         <input type="text" id="searchInput" placeholder="Поиск произведения…">
       </div>
     </header>
 
-    <div class="content" id="content">
+    <div class="content">
 
-      <!-- HOME -->
       <section class="tab-panel active" id="tab-home">
-        <div class="banner reveal" style="--i:6">
-          <div class="banner-glow"></div>
+        <div class="banner reveal" style="--i:11">
           <div class="banner-inner">
             <h2>Онлайн-библиотека<br>МБОУ «Школа №73 г.о. Самара»</h2>
-            <p>Читайте школьную программу прямо в браузере. Войдите в аккаунт,
-               чтобы сохранять произведения в избранное, вести заметки и выделять важные мысли цветом.</p>
+            <p>Читайте школьную программу прямо в браузере. Войдите в аккаунт, чтобы сохранять избранное,
+               вести заметки, оставлять комментарии и делиться списком прочитанного.</p>
           </div>
         </div>
-
         <div class="home-grid">
-          <div class="card clock-card reveal" style="--i:7">
+          <div class="card clock-card reveal" style="--i:12">
             <div class="clock-time" id="clockTime">00:00:00</div>
             <div class="clock-date" id="clockDate">—</div>
           </div>
-
-          <div class="card stat-card reveal" style="--i:8">
+          <div class="card stat-card reveal" style="--i:13">
             <div class="stat-value" id="statBooks">0</div>
             <div class="stat-label">произведений в библиотеке</div>
+            <div class="stat-delta">+2 за неделю</div>
           </div>
-
-          <div class="card stat-card reveal" style="--i:9">
-            <div class="stat-value" id="statFav">0</div>
-            <div class="stat-label">в избранном</div>
-          </div>
-
-          <div class="card font-card reveal" style="--i:10">
-            <div class="font-label">Размер текста</div>
-            <div class="font-controls">
-              <button class="btn btn-ghost btn-round" id="fontMinus" title="Меньше">A−</button>
-              <span class="font-value" id="fontValue">18</span>
-              <button class="btn btn-ghost btn-round" id="fontPlus" title="Больше">A+</button>
-            </div>
+          <div class="card stat-card reveal" style="--i:14">
+            <div class="stat-value" id="statUsers">0</div>
+            <div class="stat-label">читателей зарегистрировано</div>
+            <div class="stat-delta" id="statOnline">1 онлайн</div>
           </div>
         </div>
       </section>
 
-      <!-- BOOKS -->
       <section class="tab-panel" id="tab-books">
+        <div class="disclaimer">
+          <b>Внимание.</b> Произведения, помеченные как «Внешние», загружаются из открытых источников
+          (Викитека и другие). Автор проекта и школа №73 <b>не несут ответственности</b> за их содержание,
+          точность текста и соблюдение авторских прав. Претензии направляйте первоисточнику.
+        </div>
         <div class="books-head">
           <h3>Все произведения</h3>
           <span class="books-count" id="booksCount">0</span>
+          <div class="books-filters">
+            <button class="filter-chip active" data-filter="all">Все</button>
+            <button class="filter-chip" data-filter="local">Наши</button>
+            <button class="filter-chip" data-filter="uploaded">Загруженные</button>
+            <button class="filter-chip" data-filter="pdf">PDF</button>
+            <button class="filter-chip" data-filter="external">Внешние</button>
+            <button class="filter-chip" data-filter="fav">Избранное</button>
+          </div>
         </div>
         <div class="books-scroll" id="booksList"></div>
         <div class="empty-state hidden" id="booksEmpty">
@@ -159,60 +154,451 @@
         </div>
       </section>
 
-      <!-- ADD -->
+      <section class="tab-panel" id="tab-history">
+        <div class="card history-content">
+          <h3>История школы</h3>
+          <p><span class="year">1960</span>В 1960 году по типовому проекту на улице Майской была построена
+          школа-интернат №3. Среди маленьких домишек, окружавших её со всех сторон, «храм науки» в то время
+          был самым высоким зданием.</p>
+
+          <div class="director">
+            <div class="director-year">1960—1965</div>
+            <div>
+              <div class="director-name">Отроха М. Н.</div>
+              <div class="director-desc">Первый директор. Прежде чем стать руководителем и войти в солидный
+              директорский кабинет, ему пришлось в полной мере узнать, что такое стройка. Беседа с прорабами,
+              рабочими, сметы, стройматериалы. Это потом уже будет Первое сентября, первые ученики,
+              учебные планы, работа с детьми и родителями.</div>
+            </div>
+          </div>
+
+          <div class="highlight">По воспоминаниям современников, первый директор был благородным и крепким,
+          как утёс, человеком.</div>
+
+          <p>По архивным данным, в 1960 году в школе-интернате обучалось 32 класса-комплекта. Общее количество
+          учащихся — 936 человек. На базе школы-интерната в это время ещё работала вечерняя школа и
+          функционировала районная лыжная база.</p>
+
+          <p>При директорах <b>Демба М. А., Затрутине В. А., Ермаковой М. И., Горяйновой А. П.</b>
+          продолжали развиваться лучшие школьные традиции: совместная работа и праздничные мероприятия
+          с заводом «Металлург», экскурсии по городу и на производство, встречи с известными людьми города.</p>
+
+          <p>Шли годы. Менялась страна, вместе с ней менялась и школа. К этому времени маленькие частные
+          строения вокруг школы стали заменяться новыми многоэтажками. Самое высокое когда-то здание школы
+          затерялось теперь в домах-гигантах. Здесь начал строиться жилой 16 микрорайон Авиационного завода.</p>
+
+          <div class="director">
+            <div class="director-year">1984—1992</div>
+            <div>
+              <div class="director-name">Диженина Т. Я.</div>
+              <div class="director-desc">В эту трудную, как для страны, так и для советской системы
+              образования, эпоху перемен школа устояла от соблазнов ярких и не всегда оправданных нововведений.
+              Татьяна Яковлевна в своей педагогической деятельности отдавала приоритет традиционному
+              качественному образованию.</div>
+            </div>
+          </div>
+
+          <p>С каждым годом новые директора — <b>Бочков В. В., Савенков А. А., Залесская Е. А.,
+          Горячева Е. В.</b> — вписывают все новые странички в историю развития школы. На базе школы
+          открывается филиал ДШИ №8 «Радуга», осуществляется плодотворная работа в социально-педагогическом
+          комплексе с ТОСом 16 микрорайона (праздники — «День пожилого человека», «День Матери»,
+          Новогодняя ёлка в микрорайоне, Масленица). Пополняется и материально-техническая база:
+          открыт компьютерный класс.</p>
+
+          <div class="director">
+            <div class="director-year">с 2009</div>
+            <div>
+              <div class="director-name">Дрожджа Наталья Борисовна</div>
+              <div class="director-desc">Возглавляя педагогический коллектив и бережно храня лучшие традиции
+              школы, Наталья Борисовна старается преобразовать её в современное и конкурентоспособное
+              образовательное учреждение.</div>
+            </div>
+          </div>
+
+          <p>В здании проведена реорганизация информационного пространства ОУ. В школе осуществляется
+          работа по созданию условий для повышения здоровьесберегающих и здоровьеформирующих ресурсов.
+          Школа находится в эксперименте по профильному обучению. В этом году школа получила статус
+          «Инновационно-активная школа».</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-users">
+        <div class="users-head">
+          <h3>Пользователи</h3>
+          <span class="books-count" id="usersCount">0</span>
+          <div class="sort-controls">
+            <button class="sort-btn active" data-sort="alpha">А—Я</button>
+            <button class="sort-btn" data-sort="time">По времени</button>
+            <button class="sort-btn" data-sort="online">По онлайну</button>
+          </div>
+        </div>
+        <div class="users-list" id="usersList"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-tickets">
+        <div class="ticket-form" id="ticketForm">
+          <h4>Создать заявку</h4>
+          <label class="field"><span>Тема</span>
+            <input type="text" id="ticketTitle" placeholder="Добавить произведение / сообщить о проблеме" maxlength="120"></label>
+          <label class="field"><span>Описание</span>
+            <textarea id="ticketBody" placeholder="Опишите подробно. Если это книга — укажите автора, название, год и ссылку на файл." maxlength="2000"></textarea></label>
+          <button class="btn btn-primary btn-small" id="ticketSubmit">Отправить заявку</button>
+        </div>
+
+        <div class="tickets-head">
+          <h3>Заявки</h3>
+          <span class="tickets-count" id="ticketsCount">0</span>
+        </div>
+        <div class="tickets-list" id="ticketsList"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-chat">
+        <div class="chat-wrap">
+          <div class="chat-main">
+            <div class="chat-head">
+              <h3>Чат администраторов</h3>
+              <span class="chat-status">активен</span>
+              <span class="chat-meta" id="chatMeta">0 / 100</span>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-row">
+              <textarea id="chatInput" placeholder="Сообщение администраторам…" maxlength="800"></textarea>
+              <button class="btn btn-primary" id="chatSend">→</button>
+            </div>
+          </div>
+          <aside class="chat-side">
+            <div class="chat-side-card">
+              <h4>Администраторы</h4>
+              <div class="chat-admins" id="chatAdmins"></div>
+            </div>
+            <div class="chat-side-card">
+              <h4>О чате</h4>
+              <div style="font-size:12px;color:var(--muted);line-height:1.6">
+                Чат видят только администраторы.<br><br>
+                Бот <b>sys</b> присылает:<br>
+                — новые заявки<br>
+                — жалобы на комментарии<br><br>
+                При переполнении старые сообщения удаляются.<br>
+                Решённые кейсы остаются, но блёкнут.
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
       <section class="tab-panel" id="tab-add">
-        <div class="card info-card reveal" style="--i:6">
+        <div class="card info-card" id="addInfoCard">
           <h3>Как добавить произведение</h3>
-          <p>Библиотека пополняется <b>вручную</b> администратором школы.
-             Автоматическая загрузка файлов с сайта отключена.</p>
+          <p id="addInfoText">Прямая загрузка на сайт доступна только администраторам. Все остальные оставляют
+             <b>заявку</b> во вкладке «Заявки» — она приходит на сайт администратора.</p>
 
-          <div class="rule-block">
-            <h4>Что не принимается</h4>
-            <ul>
-              <li>Произведения, запрещённые законодательством РФ
-                  (экстремистские материалы из Федерального списка и т.п.).</li>
-              <li>Контент 18+ / NSFW, сцены насилия и любой неприемлемый
-                  для школьной библиотеки материал.</li>
-              <li>Файлы, защищённые авторским правом без разрешения правообладателя.</li>
-            </ul>
+          <div id="adminUploadPanel" class="hidden">
+            <div class="upload-zone" id="uploadZone">
+              <div class="upload-zone-icon">↑</div>
+              <div class="upload-zone-title">Перетащите файлы или нажмите для выбора</div>
+              <div class="upload-zone-desc">Поддерживаются .txt, .md, .pdf, .docx<br>Имя по шаблону: Автор - Название (год).txt</div>
+              <input type="file" id="uploadInput" multiple accept=".txt,.md,.pdf,.docx" class="hidden">
+            </div>
+            <div class="upload-queue" id="uploadQueue"></div>
           </div>
 
-          <div class="rule-block">
-            <h4>Что принимается</h4>
-            <ul>
-              <li>Классическая литература, школьная программа, научпоп.</li>
-              <li>Форматы: <code>.txt</code>, <code>.docx</code>, <code>.md</code>.</li>
-              <li>Имя файла: <code>Автор - Название (год).txt</code></li>
-            </ul>
+          <div id="userUploadHint">
+            <div class="rule-block">
+              <h4>Что не принимается</h4>
+              <ul>
+                <li>Произведения, запрещённые законодательством РФ.</li>
+                <li>Контент 18+ / NSFW, сцены насилия и любой неприемлемый для школьной библиотеки материал.</li>
+                <li>Файлы, защищённые авторским правом без разрешения правообладателя.</li>
+              </ul>
+            </div>
+
+            <div class="rule-block">
+              <h4>Что принимается</h4>
+              <ul>
+                <li>Классическая литература, школьная программа, научпоп.</li>
+                <li>Форматы: <code>.txt</code>, <code>.docx</code>, <code>.md</code>, <code>.pdf</code>.</li>
+                <li>Имя файла: <code>Автор - Название (год).txt</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-settings">
+        <div class="settings-grid">
+          <div class="setting-card">
+            <h4>Внешний вид</h4>
+            <div class="sub">Тема, плотность, акцент.</div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Тема</div>
+                <div class="setting-row-desc">Светлая, тёмная или как в системе</div></div>
+              <div class="theme-pills">
+                <button class="theme-pill" data-theme-pick="light">Светлая</button>
+                <button class="theme-pill active" data-theme-pick="dark">Тёмная</button>
+                <button class="theme-pill" data-theme-pick="auto">Система</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Цвет акцента</div>
+                <div class="setting-row-desc">Кнопки, ссылки, элементы</div></div>
+            </div>
+            <div class="accent-swatches" style="margin-top:6px">
+              <div class="accent-swatch active" data-accent="mono" title="Монохром"></div>
+              <div class="accent-swatch" data-accent="blue" title="Голубой"></div>
+              <div class="accent-swatch" data-accent="green" title="Зелёный"></div>
+              <div class="accent-swatch" data-accent="violet" title="Фиолетовый"></div>
+              <div class="accent-swatch" data-accent="pink" title="Розовый"></div>
+            </div>
+
+            <div class="setting-row" style="margin-top:14px">
+              <div><div class="setting-row-label">Радиус углов</div>
+                <div class="setting-row-desc">Форма элементов</div></div>
+              <div class="theme-pills">
+                <button class="theme-pill" data-radius="0">0</button>
+                <button class="theme-pill active" data-radius="1">1</button>
+                <button class="theme-pill" data-radius="2">2</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Компактный режим</div>
+                <div class="setting-row-desc">Меньше отступов</div></div>
+              <div class="switch" id="switchCompact"></div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Анимации</div>
+                <div class="setting-row-desc">Плавные переходы</div></div>
+              <div class="switch" id="switchAnim"></div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Свечение фона</div>
+                <div class="setting-row-desc">Мягкие пятна за интерфейсом</div></div>
+              <div class="switch" id="switchGlow"></div>
+            </div>
           </div>
 
-          <div class="mail-block">
-            <span class="mail-label">Отправить произведение на почту:</span>
-            <a class="mail-link" href="mailto:zezvarperol@gmail.com?subject=Добавление%20произведения%20в%20библиотеку">
-              zezvarperol@gmail.com
-            </a>
+          <div class="setting-card">
+            <h4>Поведение</h4>
+            <div class="sub">Что происходит при действиях.</div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Уведомления (тосты)</div>
+                <div class="setting-row-desc">Всплывающие сообщения</div></div>
+              <div class="switch on" id="switchToasts"></div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Подтверждение выхода</div>
+                <div class="setting-row-desc">Спрашивать перед logout</div></div>
+              <div class="switch" id="switchLogoutConfirm"></div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Скрывать прочитанные</div>
+                <div class="setting-row-desc">Не показывать в каталоге</div></div>
+              <div class="switch" id="switchHideRead"></div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Аватары в комментариях</div>
+                <div class="setting-row-desc">Показывать картинки</div></div>
+              <div class="switch on" id="switchAvatars"></div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Запоминать позицию чтения</div>
+                <div class="setting-row-desc">Продолжать с того же места</div></div>
+              <div class="switch on" id="switchSaveScroll"></div>
+            </div>
           </div>
 
-          <div class="nametag">by suzarux — demo v0.1.3 build 154304102026</div>
+          <div class="setting-card">
+            <h4>Шрифты</h4>
+            <div class="sub">Из Google Fonts. Все бесплатные.</div>
+
+            <label class="field"><span>Семейство интерфейса</span>
+              <select id="fontFamilySelect">
+                <option value="Inter">Inter (по умолчанию)</option>
+                <option value="Manrope">Manrope</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Open Sans">Open Sans</option>
+                <option value="Comic Neue">Comic Neue</option>
+                <option value="JetBrains Mono">JetBrains Mono</option>
+              </select>
+            </label>
+
+            <label class="field"><span>Шрифт текста книги</span>
+              <select id="fontReaderSelect">
+                <option value="PT Serif">PT Serif (классика)</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Inter">Inter</option>
+                <option value="Open Sans">Open Sans</option>
+                <option value="Roboto">Roboto</option>
+              </select>
+            </label>
+
+            <div class="font-sample" id="fontSample">Съешь ещё этих мягких французских булок, да выпей чаю.</div>
+          </div>
+
+          <div class="setting-card">
+            <h4>Читалка</h4>
+            <div class="sub">Отображение книг.</div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Размер текста</div>
+                <div class="setting-row-desc" id="fontSizeLbl">17 px</div></div>
+              <div class="font-controls">
+                <button class="btn btn-ghost btn-round" id="fontMinusSet">A−</button>
+                <span class="font-value" id="fontValue">17</span>
+                <button class="btn btn-ghost btn-round" id="fontPlusSet">A+</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Колонок в каталоге</div>
+                <div class="setting-row-desc">На широком экране</div></div>
+              <div class="theme-pills">
+                <button class="theme-pill" data-cols="1">1</button>
+                <button class="theme-pill active" data-cols="2">2</button>
+                <button class="theme-pill" data-cols="3">3</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <h4>Данные</h4>
+            <div class="sub">Экспорт, импорт, сброс.</div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Экспорт профиля</div>
+                <div class="setting-row-desc">Скачать JSON</div></div>
+              <button class="btn btn-ghost btn-small" id="exportData">Скачать</button>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Импорт профиля</div>
+                <div class="setting-row-desc">Загрузить JSON</div></div>
+              <button class="btn btn-ghost btn-small" id="importDataBtn">Загрузить</button>
+              <input type="file" id="importDataInput" accept="application/json" class="hidden">
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Сбросить интерфейс</div>
+                <div class="setting-row-desc">Все настройки UI</div></div>
+              <button class="btn btn-ghost btn-small" id="resetUIPrefs">Сбросить</button>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Сбросить всё</div>
+                <div class="setting-row-desc">Профиль, избранное, заметки</div></div>
+              <button class="btn btn-danger btn-small" id="resetAllData">Удалить</button>
+            </div>
+          </div>
+
+          <div class="setting-card" style="grid-column:1/-1">
+            <h4>О проекте</h4>
+            <div class="sub">Информация о сборке.</div>
+            <div class="version-block">
+              <div><b>Проект:</b> Онлайн-библиотека МБОУ «Школа №73 г.о. Самара»</div>
+              <div><b>Версия:</b> demo v0.1.4</div>
+              <div><b>Сборка:</b> 191906102026</div>
+              <div><b>Автор:</b> <span class="author">suzarux</span></div>
+              <div style="margin-top:6px;opacity:.7">© 2026 · Шрифты предоставлены Google Fonts (OFL / Apache 2.0)</div>
+            </div>
+          </div>
         </div>
       </section>
 
     </div>
   </main>
 
-  <nav class="mobile-nav">
+  <nav class="mobile-nav" id="mobileNav">
     <button class="mnav-item active" data-tab="home"><span>⌂</span><small>Главная</small></button>
     <button class="mnav-item" data-tab="books"><span>▤</span><small>Книги</small></button>
-    <button class="mnav-item" data-tab="add"><span>✎</span><small>Добавить</small></button>
-    <button class="mnav-item" id="mobileTheme"><span>◐</span><small>Тема</small></button>
-    <button class="mnav-item" id="mobileAuth"><span>⚿</span><small>Вход</small></button>
+    <button class="mnav-item" data-tab="users"><span>◉</span><small>Люди</small></button>
+    <button class="mnav-item hidden" id="mnavChat" data-tab="chat"><span>✦</span><small>Чат</small><span class="dot hidden" id="mChatDot"></span></button>
+    <button class="mnav-item" data-tab="tickets"><span>✎</span><small>Заявки</small><span class="dot hidden" id="mTicketDot"></span></button>
+    <button class="mnav-item" data-tab="settings"><span>⚙</span><small>Настройки</small></button>
   </nav>
 </div>
 
-<!-- ============ READER ============ -->
+<!-- MODAL: PROFILE -->
+<div class="modal-overlay hidden" id="profileModal">
+  <div class="modal">
+    <button class="modal-close" id="profileClose">×</button>
+    <h3>Мой профиль</h3>
+    <div class="profile-head">
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar" id="profileAvatar">?</div>
+        <button class="profile-avatar-edit" id="profileAvatarEdit">✎</button>
+        <input type="file" accept="image/*" id="avatarInput" class="hidden">
+      </div>
+      <div class="profile-meta">
+        <div class="profile-name" id="profileName">—</div>
+        <div class="profile-role" id="profileRole">user</div>
+      </div>
+    </div>
+    <div class="profile-stats">
+      <div class="ps-item"><div class="ps-val" id="psRead">0</div><div class="ps-lbl">Прочитано</div></div>
+      <div class="ps-item"><div class="ps-val" id="psFav">0</div><div class="ps-lbl">В избранном</div></div>
+      <div class="ps-item"><div class="ps-val" id="psTime">0м</div><div class="ps-lbl">На сайте</div></div>
+    </div>
+    <label class="field"><span>О себе</span>
+      <textarea id="profileBio" placeholder="Что читаешь, что нравится, что посоветуешь другим…" maxlength="300"></textarea></label>
+    <label class="field"><span>Прочитано полностью</span></label>
+    <div class="read-books-list" id="readBooksList"></div>
+    <button class="btn btn-ghost btn-small btn-full" id="addReadBtn" style="margin-top:8px">+ Отметить произведение</button>
+    <button class="btn btn-primary btn-full" id="profileSave" style="margin-top:18px">Сохранить</button>
+
+    <div class="modal-divider"></div>
+    <h3 style="font-size:14.5px">Смена пароля</h3>
+    <label class="field" style="margin-top:10px"><span>Старый пароль</span>
+      <input type="password" id="oldPass" placeholder="Текущий пароль"></label>
+    <label class="field"><span>Новый пароль</span>
+      <input type="password" id="newPass" placeholder="Минимум 6 символов" minlength="6"></label>
+    <label class="field"><span>Повторите новый</span>
+      <input type="password" id="newPass2" placeholder="Ещё раз"></label>
+    <div class="auth-error" id="passError"></div>
+    <button class="btn btn-ghost btn-small btn-full" id="changePassBtn">Сменить пароль</button>
+
+    <div class="modal-divider"></div>
+    <button class="btn btn-ghost btn-small btn-full" id="profileLogout">Выйти из аккаунта</button>
+  </div>
+</div>
+
+<!-- MODAL: ADD READ -->
+<div class="modal-overlay hidden" id="addReadModal">
+  <div class="modal">
+    <button class="modal-close" id="addReadClose">×</button>
+    <h3>Что прочитал?</h3>
+    <div id="addReadList" style="display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- MODAL: REPORT -->
+<div class="modal-overlay hidden" id="reportModal">
+  <div class="modal">
+    <button class="modal-close" id="reportClose">×</button>
+    <h3>Жалоба на комментарий</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+      Жалоба уйдёт администраторам в общий чат. Укажите причину.
+    </div>
+    <div id="reportCommentPreview" style="background:var(--panel-2);border:1px solid var(--border);border-radius:9px;padding:11px;font-size:12.5px;line-height:1.5;margin-bottom:14px;color:var(--muted)"></div>
+    <label class="field"><span>Причина жалобы</span>
+      <textarea id="reportReason" placeholder="Спам / оскорбления / нецензурная лексика / другое" maxlength="500"></textarea></label>
+    <div class="auth-error" id="reportError"></div>
+    <button class="btn btn-primary btn-full" id="reportSubmit">Отправить жалобу</button>
+  </div>
+</div>
+
+<!-- READER -->
 <div class="reader hidden" id="reader">
   <div class="reader-top">
-    <button class="btn btn-ghost btn-round" id="readerClose" title="Назад">←</button>
+    <button class="btn btn-ghost btn-round" id="readerClose">←</button>
     <div class="reader-title-wrap">
       <div class="reader-title" id="readerTitle">—</div>
       <div class="reader-sub" id="readerSub">—</div>
@@ -220,39 +606,36 @@
     <div class="reader-actions">
       <button class="btn btn-ghost btn-round" id="readerFav" title="В избранное">☆</button>
       <button class="btn btn-ghost btn-round" id="readerNotesBtn" title="Заметки">≡</button>
-      <button class="btn btn-ghost btn-round" id="readerFontMinus" title="Меньше">A−</button>
-      <button class="btn btn-ghost btn-round" id="readerFontPlus" title="Больше">A+</button>
+      <button class="btn btn-ghost btn-round" id="readerFontMinus">A−</button>
+      <button class="btn btn-ghost btn-round" id="readerFontPlus">A+</button>
     </div>
   </div>
-
   <div class="reader-body">
-    <article class="reader-text" id="readerText"></article>
-
-    <aside class="notes-panel" id="notesPanel">
-      <div class="notes-head">
-        <span>Заметки</span>
-        <button class="btn btn-ghost btn-round btn-tiny" id="notesClose">×</button>
-      </div>
-      <textarea class="notes-input" id="noteInput"
-                placeholder="Напиши заметку к этому произведению…"></textarea>
+    <div class="reader-text" id="readerText"></div>
+    <aside class="notes-panel collapsed" id="notesPanel">
+      <div class="notes-head"><span>Заметки</span>
+        <button class="btn btn-ghost btn-round btn-tiny" id="notesClose">×</button></div>
+      <textarea class="notes-input" id="noteInput" placeholder="Заметка к этому произведению…"></textarea>
       <button class="btn btn-primary btn-small btn-full" id="noteAdd">Добавить заметку</button>
       <div class="notes-list" id="notesList"></div>
-      <div class="hl-legend">
-        <div class="hl-legend-title">Мои выделения</div>
-        <div class="hl-legend-list" id="hlLegend"></div>
-      </div>
+      <div class="hl-legend"><div class="hl-legend-title">Выделения</div>
+        <div class="hl-legend-list" id="hlLegend"></div></div>
     </aside>
   </div>
 </div>
 
-<!-- ============ SELECTION TOOLBAR ============ -->
 <div class="sel-toolbar hidden" id="selToolbar">
   <span class="sel-label">Выделить:</span>
-  <button class="sel-color" data-color="blue"   style="--c:#4da3ff"></button>
-  <button class="sel-color" data-color="green"  style="--c:#48d597"></button>
-  <button class="sel-color" data-color="yellow" style="--c:#ffd166"></button>
-  <button class="sel-color" data-color="pink"   style="--c:#ff7eb6"></button>
-  <button class="sel-color" data-color="violet" style="--c:#a98bff"></button>
+  <button class="sel-color" data-color="blue"   style="--c:#6f9ce0"></button>
+  <button class="sel-color" data-color="green"  style="--c:#7ec87e"></button>
+  <button class="sel-color" data-color="yellow" style="--c:#e0c878"></button>
+  <button class="sel-color" data-color="pink"   style="--c:#dc8cb4"></button>
+  <button class="sel-color" data-color="violet" style="--c:#aa8cdc"></button>
+</div>
+
+<div class="easter" id="easter">
+  <div class="eg-ball" id="egBall">:3</div>
+  <div class="eg-caption">by <b>suzarux!</b></div>
 </div>
 
 <div class="toast-wrap" id="toastWrap"></div>
