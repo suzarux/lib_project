@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Онлайн-библиотека МБОУ «Школа №73 г.о. Самара»
-by suzarux — demo v0.1.4 build 191906102026
+by suzarux — demo v0.1.4.1 build 191906102026
 """
 import os
 import re
@@ -12,7 +12,6 @@ import secrets
 import hashlib
 import threading
 import zipfile
-import mimetypes
 import xml.etree.ElementTree as ET
 from functools import wraps
 from urllib.parse import urlencode
@@ -20,7 +19,7 @@ from urllib.request import urlopen, Request
 from urllib.error import URLError
 
 from flask import (Flask, request, session, jsonify, send_from_directory,
-                   render_template, abort, send_file)
+                   render_template)
 
 # ============================================================================
 # КОНСТАНТЫ И ПУТИ
@@ -40,11 +39,11 @@ ALLOWED_BOOK_EXT = {'.txt', '.md', '.docx', '.pdf'}
 ALLOWED_IMG_EXT  = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.bmp'}
 LOGIN_RE         = re.compile(r'^[A-Za-z0-9_.\-]{3,32}$')
 
-ADMIN_LOGIN = 'suzarux'          # вечный админ
-CHAT_LIMIT  = 100                # максимальное количество сообщений в чате
+ADMIN_LOGIN = 'suzarux'
+CHAT_LIMIT  = 100
 WIKI_API    = 'https://ru.wikisource.org/w/api.php'
-WIKI_TTL    = 3600               # кеш вики-запросов (сек)
-BOOK_META_CACHE_TTL = 5          # кеш метаданных книг (сек)
+WIKI_TTL    = 3600
+BOOK_META_CACHE_TTL = 5
 
 for _d in (LIB_DIR, BG_DIR, USERDATA_DIR):
     os.makedirs(_d, exist_ok=True)
@@ -80,19 +79,17 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_COOKIE_NAME='lib73_session',
-    MAX_CONTENT_LENGTH=16 * 1024 * 1024,   # 16 МБ — с запасом под PDF
+    MAX_CONTENT_LENGTH=16 * 1024 * 1024,
     JSON_AS_ASCII=False,
 )
 
 # ============================================================================
-# УТИЛИТЫ БЕЗОПАСНОСТИ
+# БЕЗОПАСНОСТЬ
 # ============================================================================
 _users_lock    = threading.RLock()
 _chat_lock     = threading.RLock()
-_tickets_lock  = threading.RLock()
-_comments_lock = threading.RLock()
 _attempts_lock = threading.Lock()
-_attempts = {}     # ip -> [timestamps]
+_attempts = {}
 
 PBKDF2_ITERS = 120_000
 
@@ -105,7 +102,6 @@ def hash_password(password: str, salt: str = None) -> str:
 
 
 def verify_password(stored: str, password: str):
-    """Возвращает (ok, needs_upgrade)."""
     try:
         algo, salt, digest = stored.split('$')
     except ValueError:
@@ -152,16 +148,9 @@ def admin_required(fn):
 
 
 # ============================================================================
-# USERS.TXT
+# USERS
 # ============================================================================
 def read_users():
-    """
-    Возвращает: {login: {'plain': str|None, 'hash': str, 'role': str|None}}
-    Форматы строк:
-        login - plain
-        login - plain - hash
-        login - plain - hash - role
-    """
     users = {}
     if not os.path.exists(USERS_FILE):
         return users
@@ -171,12 +160,13 @@ def read_users():
                 line = line.strip()
                 if not line or line.startswith('#') or ' - ' not in line:
                     continue
-                parts = line.split(' - ', 3)
-                login = parts[0].strip()
-                plain = parts[1].strip() if len(parts) > 1 else None
-                hsh   = parts[2].strip() if len(parts) > 2 else None
-                role  = parts[3].strip() if len(parts) > 3 else None
-                users[login] = {'plain': plain, 'hash': hsh, 'role': role}
+                parts = line.split(' - ', 2)
+                if len(parts) == 2:
+                    login, plain = parts[0].strip(), parts[1].strip()
+                    users[login] = {'plain': plain, 'hash': None}
+                else:
+                    login, plain, hsh = parts[0].strip(), parts[1].strip(), parts[2].strip()
+                    users[login] = {'plain': plain, 'hash': hsh}
     except OSError:
         pass
     return users
@@ -193,19 +183,17 @@ def write_users(users: dict):
             if plain is not None:
                 parts.append(plain)
             if hsh:
-                if plain is None:
-                    parts.append('')
-                parts.append(hsh)
+                if len(parts) == 1:
+                    parts.append(hsh)
+                else:
+                    parts.append(hsh)
             if role:
-                if len(parts) < 3:
-                    parts.append('')
-                parts.append(role)
+                parts.append(f"role={role}")
             f.write(' - '.join(parts) + '\n')
     os.replace(tmp, USERS_FILE)
 
 
 def ensure_hashed(login: str, plain: str):
-    """При первом входе дописывает хеш пароля в users.txt."""
     with _users_lock:
         users = read_users()
         if login not in users:
@@ -218,7 +206,6 @@ def ensure_hashed(login: str, plain: str):
 
 
 def authenticate(login: str, password: str):
-    """Возвращает роль или None."""
     with _users_lock:
         users = read_users()
     rec = users.get(login)
@@ -230,19 +217,11 @@ def authenticate(login: str, password: str):
             return None
         if upgrade:
             ensure_hashed(login, password)
-    else:
-        if not secrets.compare_digest(rec.get('plain') or '', password):
-            return None
-        ensure_hashed(login, password)
-
-    if login == ADMIN_LOGIN:
-        return 'admin'
-    if rec.get('role') == 'admin':
-        return 'admin'
-    d = load_user_data(login)
-    if d.get('role') == 'admin':
-        return 'admin'
-    return 'user'
+        return 'admin' if login == ADMIN_LOGIN else 'user'
+    if not secrets.compare_digest(rec.get('plain') or '', password):
+        return None
+    ensure_hashed(login, password)
+    return 'admin' if login == ADMIN_LOGIN else 'user'
 
 
 def is_admin(login: str) -> bool:
@@ -250,23 +229,11 @@ def is_admin(login: str) -> bool:
         return True
     if not login:
         return False
-    with _users_lock:
-        users = read_users()
-    rec = users.get(login) or {}
-    if rec.get('role') == 'admin':
-        return True
     d = load_user_data(login)
     return d.get('role') == 'admin'
 
 
 def set_user_role(login: str, role: str):
-    """role: 'admin' | 'user'"""
-    with _users_lock:
-        users = read_users()
-        if login not in users:
-            return False
-        users[login]['role'] = role
-        write_users(users)
     d = load_user_data(login)
     d['role'] = role
     save_user_data(login, d)
@@ -314,12 +281,13 @@ def default_user_data() -> dict:
     return {
         'favorites': [], 'notes': {}, 'highlights': {}, 'readScroll': {},
         'settings': {
-            'theme': 'dark', 'fontSize': 17, 'fontFamily': 'Inter',
-            'fontReader': 'PT Serif',
+            'theme': 'dark', 'fontSize': 17, 'fontFamily': 'Inter', 'fontReader': 'PT Serif',
             'compact': False, 'anim': True, 'toasts': True, 'cols': 2,
             'glow': True, 'accent': 'mono', 'radius': 1,
             'logoutConfirm': False, 'hideRead': False,
             'avatars': True, 'saveScroll': True,
+            'autoTheme': False, 'showAuthor': True, 'showYear': True, 'confirmDelete': False,
+            'readerWidth': 'normal', 'lineHeight': 'normal',
         },
         'profile': {'bio': '', 'avatar': None, 'readBooks': []},
         'stats': {'timeTotal': 0, 'lastOnline': 0},
@@ -363,7 +331,8 @@ def _sanitize_settings(s: dict, base: dict) -> dict:
         elif k in ('fontFamily', 'fontReader') and isinstance(v, str) and len(v) < 40:
             out[k] = v
         elif k in ('compact', 'anim', 'toasts', 'glow', 'logoutConfirm',
-                   'hideRead', 'avatars', 'saveScroll'):
+                   'hideRead', 'avatars', 'saveScroll',
+                   'autoTheme', 'showAuthor', 'showYear', 'confirmDelete'):
             out[k] = bool(v)
         elif k == 'cols':
             try:
@@ -377,6 +346,10 @@ def _sanitize_settings(s: dict, base: dict) -> dict:
                 out[k] = max(0, min(2, int(v)))
             except (TypeError, ValueError):
                 pass
+        elif k == 'readerWidth' and v in ('narrow', 'normal', 'wide'):
+            out[k] = v
+        elif k == 'lineHeight' and v in ('compact', 'normal', 'spacious'):
+            out[k] = v
     return out
 
 
@@ -461,6 +434,27 @@ def save_user_data(login: str, data: dict):
 
 
 # ============================================================================
+# ФАЙЛЫ
+# ============================================================================
+def load_json_file(path, default):
+    if not os.path.exists(path):
+        return default
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            d = json.load(f)
+        return d if isinstance(d, type(default)) else default
+    except (OSError, json.JSONDecodeError):
+        return default
+
+
+def save_json_file(path, data):
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+
+# ============================================================================
 # ЧАТ
 # ============================================================================
 def load_chat() -> list:
@@ -481,27 +475,6 @@ def save_chat(chat: list):
         with open(tmp, 'w', encoding='utf-8') as f:
             json.dump(chat, f, ensure_ascii=False, indent=2)
         os.replace(tmp, CHAT_FILE)
-
-
-# ============================================================================
-# ЗАЯВКИ / ЖАЛОБЫ / КОММЕНТАРИИ
-# ============================================================================
-def load_json_file(path, default):
-    if not os.path.exists(path):
-        return default
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            d = json.load(f)
-        return d if isinstance(d, type(default)) else default
-    except (OSError, json.JSONDecodeError):
-        return default
-
-
-def save_json_file(path, data):
-    tmp = path + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
 
 
 # ============================================================================
@@ -542,7 +515,7 @@ def read_pdf(path: str) -> str:
     try:
         from pypdf import PdfReader
     except ImportError:
-        return '[Модуль pypdf не установлен. Установите: pip install pypdf]'
+        return '[Модуль pypdf не установлен]'
     try:
         reader = PdfReader(path)
     except Exception as e:
@@ -660,7 +633,7 @@ def get_books() -> list:
 
 
 # ============================================================================
-# ВНЕШНЯЯ БИБЛИОТЕКА (ВИКИТЕКА)
+# ВИКИТЕКА
 # ============================================================================
 _wiki_cache = {}
 _wiki_lock = threading.RLock()
@@ -673,7 +646,7 @@ def _wiki_fetch(params: dict, ttl: int = WIKI_TTL):
         if c and time.time() - c['ts'] < ttl:
             return c['data']
     url = WIKI_API + '?' + urlencode(params)
-    req = Request(url, headers={'User-Agent': 'SchoolLib/0.1.4 (educational)'})
+    req = Request(url, headers={'User-Agent': 'SchoolLib/0.1.4.1 (educational)'})
     try:
         with urlopen(req, timeout=8) as r:
             data = json.loads(r.read().decode('utf-8'))
@@ -696,9 +669,10 @@ def wiki_search(query: str, limit: int = 20) -> list:
     results = data.get('query', {}).get('search', []) or []
     out = []
     for r in results:
+        title = r.get('title', '')
         out.append({
-            'id': 'wiki:' + r.get('title', ''),
-            'title': r.get('title', '—'),
+            'id': 'wiki:' + title,
+            'title': title or '—',
             'author': 'Викитека',
             'year': '—',
             'kind': 'external',
@@ -714,7 +688,7 @@ def wiki_get_text(title: str) -> str:
         'format': 'json',
     })
     if not data:
-        return '[Не удалось загрузить из Викитеки]'
+        return '[Не удалось загрузить из Викитеки — сервер не имеет доступа к внешней сети]'
     pages = data.get('query', {}).get('pages', {}) or {}
     for _, p in pages.items():
         if 'extract' in p:
@@ -730,7 +704,7 @@ def _headers(resp):
     resp.headers['X-Content-Type-Options'] = 'nosniff'
     resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
     resp.headers['Referrer-Policy'] = 'same-origin'
-    if request.path.startswith('/api/') or request.path.startswith('/console'):
+    if request.path.startswith('/api/'):
         resp.headers['Cache-Control'] = 'no-store'
     return resp
 
@@ -783,18 +757,13 @@ def api_register():
         users = read_users()
         if login in users:
             return jsonify(error='Такой логин уже занят'), 409
-        users[login] = {
-            'plain': password,
-            'hash': hash_password(password),
-            'role': 'admin' if login == ADMIN_LOGIN else 'user',
-        }
+        users[login] = {'plain': password, 'hash': hash_password(password)}
         write_users(users)
 
     session.clear()
     session['user'] = login
     save_user_data(login, default_user_data())
-    return jsonify(ok=True, user=login,
-                   role='admin' if login == ADMIN_LOGIN else 'user')
+    return jsonify(ok=True, user=login, role='admin' if login == ADMIN_LOGIN else 'user')
 
 
 @app.route('/api/login', methods=['POST'])
@@ -912,12 +881,28 @@ def api_upload():
     return jsonify(ok=True, id=fn)
 
 
+@app.route('/api/external_status')
+def api_external_status():
+    try:
+        data = _wiki_fetch({'action': 'query', 'meta': 'siteinfo', 'format': 'json'}, ttl=60)
+        ok = bool(data and data.get('query'))
+    except Exception:
+        ok = False
+    return jsonify(ok=ok, source='ru.wikisource.org', url='https://ru.wikisource.org/')
+
+
 @app.route('/api/external_search')
 def api_external_search():
     q = (request.args.get('q') or '').strip()
     if len(q) < 2:
-        return jsonify(results=[])
-    return jsonify(results=wiki_search(q))
+        return jsonify(results=[], ok=True)
+    try:
+        results = wiki_search(q)
+        return jsonify(results=results, ok=True)
+    except Exception as e:
+        return jsonify(results=[], ok=False,
+                       error=f'Внешняя библиотека недоступна: {e}',
+                       fallback_url='https://ru.wikisource.org/w/index.php?search=' + urlencode({'search': q}))
 
 
 # ============================================================================
@@ -1004,7 +989,7 @@ def api_user_action(login):
 
 
 # ============================================================================
-# TICKETS / COMMENTS / REPORTS
+# TICKETS
 # ============================================================================
 @app.route('/api/tickets', methods=['GET'])
 def api_tickets_get():
@@ -1044,6 +1029,9 @@ def api_tickets_post():
     return jsonify(ok=True, ticket=t)
 
 
+# ============================================================================
+# COMMENTS
+# ============================================================================
 @app.route('/api/comments')
 def api_comments():
     bid = request.args.get('book', '')
@@ -1122,7 +1110,7 @@ def api_report():
 
 
 # ============================================================================
-# CHAT API
+# CHAT
 # ============================================================================
 @app.route('/api/chat', methods=['GET'])
 @admin_required
@@ -1172,33 +1160,25 @@ def api_chat_resolve():
 def api_chat_delete():
     body = request.get_json(silent=True) or {}
     mid = str(body.get('id', ''))[:60]
-    chat = [m for m in load_chat() if m['id'] != mid]
+    chat = load_chat()
+    target = next((m for m in chat if m['id'] == mid), None)
+
+    # Если удаляем заявку из чата — удаляем её и из списка заявок
+    if target and target.get('kind') == 'ticket' and target.get('ref'):
+        tickets = load_json_file(TICKETS_FILE, [])
+        tickets = [t for t in tickets if t['id'] != target['ref']]
+        save_json_file(TICKETS_FILE, tickets)
+
+    chat = [m for m in chat if m['id'] != mid]
     save_chat(chat)
     return jsonify(ok=True)
-
-
-# ============================================================================
-# ПРИВАТНАЯ КОНСОЛЬ suzarux  (/console)
-# ============================================================================
-try:
-    from admin_console import console_bp
-    app.register_blueprint(console_bp)
-    print('[i] Консоль suzarux подключена: /console')
-except ImportError as e:
-    print(f'[!] admin_console.py не найден — консоль отключена ({e})')
-except Exception as e:
-    print(f'[!] Ошибка подключения консоли: {e}')
 
 
 # ============================================================================
 if __name__ == '__main__':
     print('=' * 62)
     print('  Онлайн-библиотека МБОУ «Школа №73 г.о. Самара»')
-    print('  by suzarux — demo v0.1.4 build 191906102026')
-    print('  Книги кладите в  :', LIB_DIR)
-    print('  Фоны кладите в   :', BG_DIR)
-    print('  Аккаунты         :', USERS_FILE)
-    print('  Консоль          : http://127.0.0.1:5000/console')
+    print('  by suzarux — demo v0.1.4.1 build 191906102026')
     print('  Открой в браузере: http://127.0.0.1:5000')
     print('=' * 62)
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)

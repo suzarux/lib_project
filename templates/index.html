@@ -103,6 +103,7 @@
 
     <div class="content">
 
+      <!-- HOME -->
       <section class="tab-panel active" id="tab-home">
         <div class="banner reveal" style="--i:11">
           <div class="banner-inner">
@@ -129,6 +130,7 @@
         </div>
       </section>
 
+      <!-- BOOKS -->
       <section class="tab-panel" id="tab-books">
         <div class="disclaimer">
           <b>Внимание.</b> Произведения, помеченные как «Внешние», загружаются из открытых источников
@@ -154,6 +156,7 @@
         </div>
       </section>
 
+      <!-- HISTORY -->
       <section class="tab-panel" id="tab-history">
         <div class="card history-content">
           <h3>История школы</h3>
@@ -222,6 +225,7 @@
         </div>
       </section>
 
+      <!-- USERS -->
       <section class="tab-panel" id="tab-users">
         <div class="users-head">
           <h3>Пользователи</h3>
@@ -235,6 +239,7 @@
         <div class="users-list" id="usersList"></div>
       </section>
 
+      <!-- TICKETS -->
       <section class="tab-panel" id="tab-tickets">
         <div class="ticket-form" id="ticketForm">
           <h4>Создать заявку</h4>
@@ -252,6 +257,7 @@
         <div class="tickets-list" id="ticketsList"></div>
       </section>
 
+      <!-- CHAT -->
       <section class="tab-panel" id="tab-chat">
         <div class="chat-wrap">
           <div class="chat-main">
@@ -286,6 +292,7 @@
         </div>
       </section>
 
+      <!-- ADD -->
       <section class="tab-panel" id="tab-add">
         <div class="card info-card" id="addInfoCard">
           <h3>Как добавить произведение</h3>
@@ -311,7 +318,6 @@
                 <li>Файлы, защищённые авторским правом без разрешения правообладателя.</li>
               </ul>
             </div>
-
             <div class="rule-block">
               <h4>Что принимается</h4>
               <ul>
@@ -324,8 +330,10 @@
         </div>
       </section>
 
+      <!-- SETTINGS -->
       <section class="tab-panel" id="tab-settings">
         <div class="settings-grid">
+
           <div class="setting-card">
             <h4>Внешний вид</h4>
             <div class="sub">Тема, плотность, акцент.</div>
@@ -379,6 +387,12 @@
                 <div class="setting-row-desc">Мягкие пятна за интерфейсом</div></div>
               <div class="switch" id="switchGlow"></div>
             </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Авто-тема по времени</div>
+                <div class="setting-row-desc">Светлая днём, тёмная ночью</div></div>
+              <div class="switch" id="switchAutoTheme"></div>
+            </div>
           </div>
 
           <div class="setting-card">
@@ -413,6 +427,24 @@
               <div><div class="setting-row-label">Запоминать позицию чтения</div>
                 <div class="setting-row-desc">Продолжать с того же места</div></div>
               <div class="switch on" id="switchSaveScroll"></div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Показывать автора</div>
+                <div class="setting-row-desc">В карточке произведения</div></div>
+              <div class="switch on" id="switchShowAuthor"></div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Показывать год</div>
+                <div class="setting-row-desc">В карточке произведения</div></div>
+              <div class="switch on" id="switchShowYear"></div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Подтверждать удаление</div>
+                <div class="setting-row-desc">Спрашивать перед удалением</div></div>
+              <div class="switch" id="switchConfirmDelete"></div>
             </div>
           </div>
 
@@ -467,6 +499,26 @@
                 <button class="theme-pill" data-cols="3">3</button>
               </div>
             </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Ширина текста</div>
+                <div class="setting-row-desc">Колонка читалки</div></div>
+              <div class="theme-pills">
+                <button class="theme-pill" data-readerwidth="narrow">Узко</button>
+                <button class="theme-pill active" data-readerwidth="normal">Сред.</button>
+                <button class="theme-pill" data-readerwidth="wide">Широко</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div><div class="setting-row-label">Межстрочный интервал</div>
+                <div class="setting-row-desc">Плотность строк</div></div>
+              <div class="theme-pills">
+                <button class="theme-pill" data-lineheight="compact">Плотно</button>
+                <button class="theme-pill active" data-lineheight="normal">Обычно</button>
+                <button class="theme-pill" data-lineheight="spacious">Просторно</button>
+              </div>
+            </div>
           </div>
 
           <div class="setting-card">
@@ -493,6 +545,12 @@
             </div>
 
             <div class="setting-row">
+              <div><div class="setting-row-label">Внешняя библиотека</div>
+                <div class="setting-row-desc" id="wikiStatus">Проверка…</div></div>
+              <button class="btn btn-ghost btn-small" id="wikiCheck">Проверить</button>
+            </div>
+
+            <div class="setting-row">
               <div><div class="setting-row-label">Сбросить всё</div>
                 <div class="setting-row-desc">Профиль, избранное, заметки</div></div>
               <button class="btn btn-danger btn-small" id="resetAllData">Удалить</button>
@@ -504,12 +562,13 @@
             <div class="sub">Информация о сборке.</div>
             <div class="version-block">
               <div><b>Проект:</b> Онлайн-библиотека МБОУ «Школа №73 г.о. Самара»</div>
-              <div><b>Версия:</b> demo v0.1.4</div>
+              <div><b>Версия:</b> demo v0.1.4.1</div>
               <div><b>Сборка:</b> 191906102026</div>
               <div><b>Автор:</b> <span class="author">suzarux</span></div>
               <div style="margin-top:6px;opacity:.7">© 2026 · Шрифты предоставлены Google Fonts (OFL / Apache 2.0)</div>
             </div>
           </div>
+
         </div>
       </section>
 
@@ -624,6 +683,7 @@
   </div>
 </div>
 
+<!-- SEL TOOLBAR -->
 <div class="sel-toolbar hidden" id="selToolbar">
   <span class="sel-label">Выделить:</span>
   <button class="sel-color" data-color="blue"   style="--c:#6f9ce0"></button>
@@ -633,6 +693,7 @@
   <button class="sel-color" data-color="violet" style="--c:#aa8cdc"></button>
 </div>
 
+<!-- EASTER EGG -->
 <div class="easter" id="easter">
   <div class="eg-ball" id="egBall">:3</div>
   <div class="eg-caption">by <b>suzarux!</b></div>
