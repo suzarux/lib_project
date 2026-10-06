@@ -25,12 +25,12 @@ from flask import (Flask, request, session, jsonify, send_from_directory,
 # ============================================================================
 # КОНСТАНТЫ И ПУТИ
 # ============================================================================
-BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
-LIB_DIR     = os.path.join(BASE_DIR, 'lib')
-BG_DIR      = os.path.join(BASE_DIR, 'background')
+BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
+LIB_DIR      = os.path.join(BASE_DIR, 'lib')
+BG_DIR       = os.path.join(BASE_DIR, 'background')
 USERDATA_DIR = os.path.join(BASE_DIR, 'userdata')
-USERS_FILE  = os.path.join(BASE_DIR, 'users.txt')
-SECRET_FILE = os.path.join(BASE_DIR, '.secret_key')
+USERS_FILE   = os.path.join(BASE_DIR, 'users.txt')
+SECRET_FILE  = os.path.join(BASE_DIR, '.secret_key')
 
 CHAT_FILE     = os.path.join(USERDATA_DIR, 'chat.json')
 TICKETS_FILE  = os.path.join(USERDATA_DIR, 'tickets.json')
@@ -87,9 +87,9 @@ app.config.update(
 # ============================================================================
 # УТИЛИТЫ БЕЗОПАСНОСТИ
 # ============================================================================
-_users_lock   = threading.RLock()
-_chat_lock    = threading.RLock()
-_tickets_lock = threading.RLock()
+_users_lock    = threading.RLock()
+_chat_lock     = threading.RLock()
+_tickets_lock  = threading.RLock()
 _comments_lock = threading.RLock()
 _attempts_lock = threading.Lock()
 _attempts = {}     # ip -> [timestamps]
@@ -156,10 +156,11 @@ def admin_required(fn):
 # ============================================================================
 def read_users():
     """
-    Возвращает: {login: {'plain': str|None, 'hash': str}}
+    Возвращает: {login: {'plain': str|None, 'hash': str, 'role': str|None}}
     Форматы строк:
         login - plain
         login - plain - hash
+        login - plain - hash - role
     """
     users = {}
     if not os.path.exists(USERS_FILE):
@@ -170,13 +171,12 @@ def read_users():
                 line = line.strip()
                 if not line or line.startswith('#') or ' - ' not in line:
                     continue
-                parts = line.split(' - ', 2)
-                if len(parts) == 2:
-                    login, plain = parts[0].strip(), parts[1].strip()
-                    users[login] = {'plain': plain, 'hash': None}
-                else:
-                    login, plain, hsh = parts[0].strip(), parts[1].strip(), parts[2].strip()
-                    users[login] = {'plain': plain, 'hash': hsh}
+                parts = line.split(' - ', 3)
+                login = parts[0].strip()
+                plain = parts[1].strip() if len(parts) > 1 else None
+                hsh   = parts[2].strip() if len(parts) > 2 else None
+                role  = parts[3].strip() if len(parts) > 3 else None
+                users[login] = {'plain': plain, 'hash': hsh, 'role': role}
     except OSError:
         pass
     return users
@@ -188,12 +188,19 @@ def write_users(users: dict):
         for login, rec in users.items():
             plain = rec.get('plain')
             hsh = rec.get('hash')
-            if plain is not None and hsh:
-                f.write(f"{login} - {plain} - {hsh}\n")
-            elif plain is not None:
-                f.write(f"{login} - {plain}\n")
-            elif hsh:
-                f.write(f"{login} - {hsh}\n")
+            role = rec.get('role')
+            parts = [login]
+            if plain is not None:
+                parts.append(plain)
+            if hsh:
+                if plain is None:
+                    parts.append('')
+                parts.append(hsh)
+            if role:
+                if len(parts) < 3:
+                    parts.append('')
+                parts.append(role)
+            f.write(' - '.join(parts) + '\n')
     os.replace(tmp, USERS_FILE)
 
 
@@ -223,12 +230,19 @@ def authenticate(login: str, password: str):
             return None
         if upgrade:
             ensure_hashed(login, password)
-        return 'admin' if login == ADMIN_LOGIN else ('admin' if rec.get('role') == 'admin' else 'user')
-    # старый формат — только plain
-    if not secrets.compare_digest(rec.get('plain') or '', password):
-        return None
-    ensure_hashed(login, password)
-    return 'admin' if login == ADMIN_LOGIN else 'user'
+    else:
+        if not secrets.compare_digest(rec.get('plain') or '', password):
+            return None
+        ensure_hashed(login, password)
+
+    if login == ADMIN_LOGIN:
+        return 'admin'
+    if rec.get('role') == 'admin':
+        return 'admin'
+    d = load_user_data(login)
+    if d.get('role') == 'admin':
+        return 'admin'
+    return 'user'
 
 
 def is_admin(login: str) -> bool:
@@ -241,7 +255,6 @@ def is_admin(login: str) -> bool:
     rec = users.get(login) or {}
     if rec.get('role') == 'admin':
         return True
-    # дополнительно смотрим userdata
     d = load_user_data(login)
     return d.get('role') == 'admin'
 
@@ -254,7 +267,6 @@ def set_user_role(login: str, role: str):
             return False
         users[login]['role'] = role
         write_users(users)
-    # синхронизируем в userdata
     d = load_user_data(login)
     d['role'] = role
     save_user_data(login, d)
@@ -302,7 +314,8 @@ def default_user_data() -> dict:
     return {
         'favorites': [], 'notes': {}, 'highlights': {}, 'readScroll': {},
         'settings': {
-            'theme': 'dark', 'fontSize': 17, 'fontFamily': 'Inter', 'fontReader': 'PT Serif',
+            'theme': 'dark', 'fontSize': 17, 'fontFamily': 'Inter',
+            'fontReader': 'PT Serif',
             'compact': False, 'anim': True, 'toasts': True, 'cols': 2,
             'glow': True, 'accent': 'mono', 'radius': 1,
             'logoutConfirm': False, 'hideRead': False,
@@ -624,7 +637,6 @@ def get_books() -> list:
             if cached and cached['mtime'] == st.st_mtime and now - cached['ts'] < BOOK_META_CACHE_TTL:
                 books.append(cached['meta'])
                 continue
-        # читаем только шапку для метаданных (до 3KB)
         try:
             head = ''
             if fn.lower().endswith(('.txt', '.md')):
@@ -638,8 +650,6 @@ def get_books() -> list:
                         continue
                 if not head:
                     head = raw.decode('utf-8', errors='replace')
-            else:
-                head = ''
         except OSError:
             head = ''
         meta = build_book_meta(fn, head)
@@ -720,7 +730,7 @@ def _headers(resp):
     resp.headers['X-Content-Type-Options'] = 'nosniff'
     resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
     resp.headers['Referrer-Policy'] = 'same-origin'
-    if request.path.startswith('/api/'):
+    if request.path.startswith('/api/') or request.path.startswith('/console'):
         resp.headers['Cache-Control'] = 'no-store'
     return resp
 
@@ -783,7 +793,8 @@ def api_register():
     session.clear()
     session['user'] = login
     save_user_data(login, default_user_data())
-    return jsonify(ok=True, user=login, role='admin' if login == ADMIN_LOGIN else 'user')
+    return jsonify(ok=True, user=login,
+                   role='admin' if login == ADMIN_LOGIN else 'user')
 
 
 @app.route('/api/login', methods=['POST'])
@@ -890,14 +901,12 @@ def api_upload():
     ext = os.path.splitext(fn)[1].lower()
     if ext not in ALLOWED_BOOK_EXT:
         return jsonify(error=f'Недопустимый формат: {ext}'), 400
-    # защита от перезаписи
     target = os.path.join(LIB_DIR, fn)
     if os.path.exists(target):
         base, e = os.path.splitext(fn)
         fn = f'{base}_{int(time.time())}{e}'
         target = os.path.join(LIB_DIR, fn)
     f.save(target)
-    # сбрасываем кеш
     with _books_lock:
         _books_cache.pop(fn, None)
     return jsonify(ok=True, id=fn)
@@ -929,7 +938,6 @@ def api_post_data():
     login = session['user']
     old = load_user_data(login)
     clean = sanitize_user_data(body)
-    # не даём клиенту менять роль/бан/мут самому
     clean['role'] = old.get('role', 'user')
     clean['banned'] = old.get('banned', False)
     clean['muted'] = old.get('muted', False)
@@ -1025,7 +1033,6 @@ def api_tickets_post():
     tickets.append(t)
     save_json_file(TICKETS_FILE, tickets[-500:])
 
-    # системное сообщение в чат
     chat = load_chat()
     chat.append({
         'id': 'sys_' + t['id'], 'author': 'sys', 'kind': 'ticket',
@@ -1171,6 +1178,19 @@ def api_chat_delete():
 
 
 # ============================================================================
+# ПРИВАТНАЯ КОНСОЛЬ suzarux  (/console)
+# ============================================================================
+try:
+    from admin_console import console_bp
+    app.register_blueprint(console_bp)
+    print('[i] Консоль suzarux подключена: /console')
+except ImportError as e:
+    print(f'[!] admin_console.py не найден — консоль отключена ({e})')
+except Exception as e:
+    print(f'[!] Ошибка подключения консоли: {e}')
+
+
+# ============================================================================
 if __name__ == '__main__':
     print('=' * 62)
     print('  Онлайн-библиотека МБОУ «Школа №73 г.о. Самара»')
@@ -1178,6 +1198,7 @@ if __name__ == '__main__':
     print('  Книги кладите в  :', LIB_DIR)
     print('  Фоны кладите в   :', BG_DIR)
     print('  Аккаунты         :', USERS_FILE)
+    print('  Консоль          : http://127.0.0.1:5000/console')
     print('  Открой в браузере: http://127.0.0.1:5000')
     print('=' * 62)
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)

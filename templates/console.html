@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Консоль suzarux — Библиотека №73</title>
+<style>
+:root{--bg:#0a0a0a;--panel:#141414;--panel-2:#1c1c1c;--border:#2a2a2a;
+ --border-2:#3a3a3a;--text:#e9e9e9;--muted:#8a8a8a;--muted-2:#5a5a5a;
+ --accent:#e8e8e8;--accent-t:#0a0a0a;--ok:#7ec87e;--warn:#e0b060;--err:#e07070;
+ --mono:ui-monospace,'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+ --sans:'Inter','Segoe UI',system-ui,sans-serif;
+ --spring:cubic-bezier(.34,1.56,.64,1);
+ --smooth:cubic-bezier(.22,1,.36,1);}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);
+ overflow:hidden;-webkit-font-smoothing:antialiased;
+ background-image:
+  linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+ background-size:40px 40px;}
+button,input,textarea{font-family:inherit;color:inherit}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:20px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted-2)}
+
+.wrap{display:grid;grid-template-columns:300px 1fr;height:100vh}
+.aside{border-right:1px solid var(--border);background:var(--panel);
+ display:flex;flex-direction:column;overflow:hidden}
+.brand{padding:20px 18px 16px;border-bottom:1px solid var(--border);
+ display:flex;gap:11px;align-items:center}
+.brand-logo{width:36px;height:36px;border-radius:10px;background:var(--accent);
+ color:var(--accent-t);display:flex;align-items:center;justify-content:center;
+ font-size:17px}
+.brand-title{font-size:14.5px;font-weight:700}
+.brand-sub{font-size:11px;color:var(--muted);margin-top:2px;
+ font-family:var(--mono)}
+.section{padding:14px 16px;border-bottom:1px solid var(--border)}
+.section-title{font-size:11px;color:var(--muted);font-weight:700;
+ text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.stat{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;
+ font-family:var(--mono)}
+.stat span:first-child{color:var(--muted)}
+.stat span:last-child{color:var(--text)}
+
+.backups{flex:1;overflow-y:auto;padding:8px 10px}
+.backup{padding:10px 12px;border-radius:10px;background:var(--panel-2);
+ border:1px solid var(--border);margin-bottom:7px;font-size:12.5px;
+ transition:all .3s var(--spring);cursor:pointer}
+.backup:hover{border-color:var(--border-2);transform:translateX(3px)}
+.backup.active{border-color:var(--accent);
+ box-shadow:inset 0 0 0 1px var(--accent)}
+.backup-name{font-family:var(--mono);font-weight:700;font-size:12px}
+.backup-meta{font-size:11px;color:var(--muted);margin-top:3px;
+ display:flex;gap:8px}
+.backup-actions{display:flex;gap:5px;margin-top:8px;opacity:0;
+ transition:opacity .25s}
+.backup:hover .backup-actions{opacity:1}
+.bact{font-size:10.5px;padding:3px 8px;border-radius:6px;
+ border:1px solid var(--border-2);background:transparent;cursor:pointer;
+ font-weight:600;color:var(--muted);transition:all .3s var(--spring)}
+.bact:hover{color:var(--text);border-color:var(--accent)}
+.bact.danger:hover{color:var(--err);border-color:var(--err)}
+
+.main{display:flex;flex-direction:column;overflow:hidden}
+.head{padding:16px 22px;border-bottom:1px solid var(--border);
+ background:var(--panel);display:flex;align-items:center;gap:12px}
+.head h1{font-size:16px;font-weight:700}
+.head .path{font-family:var(--mono);font-size:11.5px;color:var(--muted);
+ margin-left:auto}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);
+ box-shadow:0 0 8px var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.term{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.term-out{flex:1;overflow-y:auto;padding:18px 22px;font-family:var(--mono);
+ font-size:12.5px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word}
+.term-line{margin-bottom:6px}
+.term-cmd{color:var(--accent)}
+.term-prompt::before{content:'$ ';color:var(--ok)}
+.term-out-pre{color:var(--text)}
+.term-err{color:var(--err)}
+.term-meta{color:var(--muted-2);font-size:11px}
+.term-input-row{display:flex;gap:10px;padding:12px 22px 14px;
+ border-top:1px solid var(--border);background:var(--panel)}
+.term-prompt-sym{color:var(--ok);font-family:var(--mono);font-size:14px;
+ display:flex;align-items:center}
+#cmdInput{flex:1;background:var(--panel-2);border:1px solid var(--border);
+ border-radius:9px;padding:10px 13px;font-family:var(--mono);font-size:13px;
+ outline:none;transition:all .25s var(--smooth)}
+#cmdInput:focus{border-color:var(--accent);
+ box-shadow:0 0 0 3px rgba(232,232,232,.08)}
+.btn{padding:9px 16px;border-radius:9px;border:1px solid var(--border-2);
+ background:var(--panel-2);cursor:pointer;font-weight:600;font-size:12.5px;
+ transition:all .3s var(--spring)}
+.btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.btn-p{background:var(--accent);color:var(--accent-t);border-color:var(--accent)}
+
+.chips{display:flex;flex-wrap:wrap;gap:5px;padding:10px 22px;border-top:1px solid var(--border);
+ background:var(--panel-2);max-height:80px;overflow-y:auto}
+.chip{font-size:11px;font-family:var(--mono);padding:4px 9px;border-radius:14px;
+ background:var(--panel);border:1px solid var(--border);cursor:pointer;
+ color:var(--muted);transition:all .25s var(--smooth)}
+.chip:hover{color:var(--text);border-color:var(--border-2)}
+
+.toast-wrap{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+ z-index:120;display:flex;flex-direction:column;gap:8px;align-items:center;
+ pointer-events:none}
+.toast{padding:10px 20px;border-radius:22px;font-size:12.5px;font-weight:600;
+ background:var(--panel);border:1px solid var(--border-2);
+ box-shadow:0 14px 34px rgba(0,0,0,.5);
+ animation:tIn .4s var(--spring) both;font-family:var(--mono)}
+@keyframes tIn{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
+.toast.ok{border-color:var(--ok);color:var(--ok)}
+.toast.err{border-color:var(--err);color:var(--err)}
+
+@media (max-width:860px){
+ .wrap{grid-template-columns:1fr}
+ .aside{position:absolute;inset:0 auto 0 0;width:280px;z-index:10;
+  transform:translateX(-100%);transition:transform .4s var(--spring)}
+ .aside.open{transform:translateX(0)}
+ .menu-btn{display:block!important}
+}
+.menu-btn{display:none;padding:6px 11px;border-radius:8px;
+ border:1px solid var(--border);background:var(--panel-2);cursor:pointer;
+ font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <aside class="aside" id="aside">
+    <div class="brand">
+      <div class="brand-logo">▤</div>
+      <div>
+        <div class="brand-title">Консоль suzarux</div>
+        <div class="brand-sub">v0.1.4 · build 191906102026</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Система</div>
+      <div class="stat"><span>Время</span><span id="sysTime">—</span></div>
+      <div class="stat"><span>Python</span><span id="sysPy">—</span></div>
+      <div class="stat"><span>Файлов в userdata</span><span id="sysUdata">—</span></div>
+      <div class="stat"><span>Бэкапов</span><span id="sysBk">—</span></div>
+      <div class="stat"><span>Свободно</span><span id="sysDisk">—</span></div>
+    </div>
+
+    <div class="section" style="display:flex;gap:6px">
+      <button class="btn btn-p" id="btnBackup" style="flex:1">Создать бэкап</button>
+      <button class="btn" id="btnRefresh" title="Обновить">↻</button>
+    </div>
+
+    <div class="section-title" style="padding:8px 16px 4px">Бэкапы <span id="bkCount" style="color:var(--muted-2)"></span></div>
+    <div class="backups" id="backups"></div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <button class="menu-btn" id="menuBtn">≡</button>
+      <div class="dot"></div>
+      <h1>Терминал</h1>
+      <div class="path" id="basePath">—</div>
+    </div>
+
+    <div class="term">
+      <div class="term-out" id="out">
+        <div class="term-line term-meta">Консоль suzarux. Команды выполняются в каталоге проекта.</div>
+        <div class="term-line term-meta">Разрешены: ls, cat, tail, grep, du, df, find, git status/log/pull, pip list и др.</div>
+        <div class="term-line term-meta">Кнопка «Создать бэкап» копирует users.txt, .secret_key, userdata/ в backups/.</div>
+      </div>
+      <div class="term-input-row">
+        <span class="term-prompt-sym">$</span>
+        <input id="cmdInput" placeholder="введите команду…" autocomplete="off" spellcheck="false">
+        <button class="btn btn-p" id="btnRun">Выполнить</button>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </main>
+</div>
+
+<div class="toast-wrap" id="tw"></div>
+
+<script>
+(() => {
+'use strict';
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(m, kind){
+  const w=$('#tw'), e=document.createElement('div');
+  e.className='toast'+(kind==='err'?' err':kind==='ok'?' ok':'');
+  e.textContent=m; w.appendChild(e);
+  setTimeout(()=>{e.classList.add('out'); setTimeout(()=>e.remove(),300);},2200);
+}
+function fmtSize(b){
+  if(!b) return '0 Б';
+  if(b < 1024) return b + ' Б';
+  if(b < 1024*1024) return (b/1024).toFixed(1) + ' КБ';
+  if(b < 1024*1024*1024) return (b/1024/1024).toFixed(1) + ' МБ';
+  return (b/1024/1024/1024).toFixed(2) + ' ГБ';
+}
+async function api(path, opts = {}){
+  const cfg = {
+    method: opts.method || 'GET',
+    credentials: 'same-origin',
+    headers: {'Content-Type':'application/json'},
+  };
+  if(opts.body !== undefined) cfg.body = JSON.stringify(opts.body);
+  const res = await fetch(path, cfg);
+  let data = {};
+  try { data = await res.json(); } catch(e){}
+  if(!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+/* ---------- SYSTEM ---------- */
+async function loadSystem(){
+  try{
+    const s = await api('/console/api/system');
+    $('#sysTime').textContent = s.time.split(' ')[1] || s.time;
+    $('#sysPy').textContent = s.python;
+    $('#sysUdata').textContent = s.userdata_files;
+    $('#sysBk').textContent = s.backups_count;
+    $('#sysDisk').textContent = fmtSize(s.disk.free) + ' свободно';
+    $('#basePath').textContent = s.base;
+  }catch(e){ toast(e.message, 'err'); }
+}
+
+/* ---------- BACKUPS ---------- */
+let currentBackup = null;
+async function loadBackups(){
+  try{
+    const r = await api('/console/api/backups');
+    const wrap = $('#backups'); wrap.innerHTML = '';
+    $('#bkCount').textContent = '(' + r.backups.length + '/' + r.keep + ')';
+    if(!r.backups.length){
+      wrap.innerHTML = '<div style="text-align:center;color:var(--muted);' +
+        'font-size:12px;padding:20px 0">Бэкапов пока нет</div>';
+      return;
+    }
+    r.backups.forEach(b => {
+      const el = document.createElement('div');
+      el.className = 'backup' + (currentBackup===b.name?' active':'');
+      el.innerHTML = `
+        <div class="backup-name">${esc(b.name)}</div>
+        <div class="backup-meta">
+          <span>${b.files} файлов</span>
+          <span>·</span>
+          <span>${fmtSize(b.size)}</span>
+        </div>
+        <div class="backup-actions">
+          <button class="bact" data-act="restore">Восстановить</button>
+          <button class="bact" data-act="download">Скачать</button>
+          <button class="bact danger" data-act="delete">Удалить</button>
+        </div>`;
+      el.querySelector('[data-act="restore"]').addEventListener('click', e => {
+        e.stopPropagation(); restoreBackup(b.name);
+      });
+      el.querySelector('[data-act="download"]').addEventListener('click', e => {
+        e.stopPropagation();
+        window.location.href = '/console/api/backups/download/' + encodeURIComponent(b.name);
+      });
+      el.querySelector('[data-act="delete"]').addEventListener('click', e => {
+        e.stopPropagation(); deleteBackup(b.name);
+      });
+      wrap.appendChild(el);
+    });
+  }catch(e){ toast(e.message, 'err'); }
+}
+async function createBackup(){
+  try{
+    const r = await api('/console/api/backups/create', {method:'POST'});
+    toast('Бэкап создан: ' + r.name, 'ok');
+    print('backup', `✓ Создан бэкап ${r.name} (${fmtSize(r.size)})`);
+    await loadBackups(); await loadSystem();
+  }catch(e){ toast(e.message, 'err'); }
+}
+async function restoreBackup(name){
+  if(!confirm('Восстановить состояние из «' + name + '»? Текущие файлы будут заменены.')) return;
+  try{
+    const r = await api('/console/api/backups/restore', {method:'POST', body:{name}});
+    toast('Восстановлено: ' + r.files + ' файлов', 'ok');
+    print('backup', `✓ Восстановлен бэкап ${name} (${r.files} файлов)`);
+    await loadBackups(); await loadSystem();
+  }catch(e){ toast(e.message, 'err'); }
+}
+async function deleteBackup(name){
+  if(!confirm('Удалить бэкап «' + name + '»?')) return;
+  try{
+    await api('/console/api/backups/delete', {method:'POST', body:{name}});
+    toast('Удалён', 'ok');
+    await loadBackups(); await loadSystem();
+  }catch(e){ toast(e.message, 'err'); }
+}
+
+/* ---------- COMMANDS ---------- */
+function print(cls, text){
+  const out = $('#out');
+  const el = document.createElement('div');
+  el.className = 'term-line' + (cls ? ' term-' + cls : '');
+  el.textContent = text;
+  out.appendChild(el);
+  out.scrollTop = out.scrollHeight;
+}
+async function runCommand(cmd){
+  cmd = (cmd || '').trim();
+  if(!cmd) return;
+  const out = $('#out');
+  const line = document.createElement('div');
+  line.className = 'term-line';
+  const p = document.createElement('span');
+  p.className = 'term-prompt';
+  p.textContent = '';
+  const c = document.createElement('span');
+  c.className = 'term-cmd';
+  c.textContent = cmd;
+  line.appendChild(p); line.appendChild(c);
+  out.appendChild(line);
+
+  try{
+    const r = await api('/console/api/exec', {method:'POST', body:{cmd}});
+    if(r.error){ print('err', r.error); return; }
+    if(r.stdout) print('out-pre', r.stdout.replace(/\n+$/,''));
+    if(r.stderr) print('err', r.stderr.replace(/\n+$/,''));
+    if(r.code !== 0) print('meta', `[exit ${r.code}]`);
+    if(!r.stdout && !r.stderr) print('meta', '[нет вывода]');
+  }catch(e){ print('err', e.message); }
+  out.scrollTop = out.scrollHeight;
+}
+
+/* ---------- CHIPS ---------- */
+const DEFAULT_CHIPS = [
+  'pwd', 'ls -la', 'du -sh userdata', 'df -h .',
+  'cat users.txt', 'ls userdata',
+  'git status', 'git log --oneline -10',
+  'pip list | grep -i flask',
+  'tail -n 30 logs/*.log 2>/dev/null || echo "нет логов"',
+  'uptime', 'date', 'whoami',
+];
+function renderChips(list){
+  const wrap = $('#chips'); wrap.innerHTML = '';
+  list.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.textContent = c;
+    el.addEventListener('click', () => {
+      $('#cmdInput').value = c;
+      $('#cmdInput').focus();
+    });
+    wrap.appendChild(el);
+  });
+}
+
+/* ---------- INIT ---------- */
+async function boot(){
+  await loadSystem();
+  await loadBackups();
+  renderChips(DEFAULT_CHIPS);
+  setInterval(loadSystem, 30000);
+
+  $('#btnRefresh').addEventListener('click', () => { loadSystem(); loadBackups(); });
+  $('#btnBackup').addEventListener('click', createBackup);
+  $('#btnRun').addEventListener('click', () => {
+    const inp = $('#cmdInput');
+    const cmd = inp.value;
+    inp.value = '';
+    runCommand(cmd);
+  });
+  $('#cmdInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); $('#btnRun').click(); }
+  });
+  $('#menuBtn').addEventListener('click', () => $('#aside').classList.toggle('open'));
+}
+document.addEventListener('DOMContentLoaded', boot);
+})();
+</script>
+</body>
+</html>

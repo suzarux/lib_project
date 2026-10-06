@@ -1,0 +1,40 @@
+{
+  "username": "suzarux",
+  "token": "СЮДА_API_ТОКЕН",
+  "domain": "suzarux.pythonanywhere.com",
+  "remote_base": "/home/suzarux/lib_project",
+  "local_base": ".",
+
+  "files": [
+    "server.py",
+    "requirements.txt",
+    "templates",
+    "static",
+    "admin_console.py"
+  ],
+
+  "state_files": [
+    "users.txt",
+    "userdata",
+    ".secret_key"
+  ],
+
+  "exclude_names": [
+    ".git", ".github", "venv", ".venv", "__pycache__",
+    ".idea", ".vscode", "node_modules",
+    "userdata", "lib", "background", "backups",
+    "standalone.html", "deploy.py",
+    ".deploy_config.json", ".deploy_cache.json",
+    ".secret_key", "users.txt"
+  ],
+
+  "exclude_exts": [
+    ".pyc", ".pyo", ".log", ".tmp", ".bak",
+    ".DS_Store", ".jpg", ".jpeg", ".png", ".webp",
+    ".gif", ".bmp", ".avif", ".zip"
+  ],
+
+  "backup_dir": "backups",
+  "backup_keep": 20,
+  "push_backups_to_remote": true
+}
